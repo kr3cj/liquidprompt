@@ -329,6 +329,7 @@ _lp_source_config()
     LP_ENABLE_RUNTIME=${LP_ENABLE_RUNTIME:-1}
     LP_ENABLE_VIRTUALENV=${LP_ENABLE_VIRTUALENV:-1}
     LP_ENABLE_SCLS=${LP_ENABLE_SCLS:-1}
+    LP_ENABLE_KUBERNETES=${LP_ENABLE_KUBERNETES:-0}
     LP_ENABLE_VCS_ROOT=${LP_ENABLE_VCS_ROOT:-0}
     LP_ENABLE_TITLE=${LP_ENABLE_TITLE:-0}
     LP_ENABLE_SCREEN_TITLE=${LP_ENABLE_SCREEN_TITLE:-0}
@@ -392,6 +393,7 @@ _lp_source_config()
     LP_COLOR_IN_MULTIPLEXER=${LP_COLOR_IN_MULTIPLEXER:-$BOLD_BLUE}
     LP_COLOR_RUNTIME=${LP_COLOR_RUNTIME:-$YELLOW}
     LP_COLOR_VIRTUALENV=${LP_COLOR_VIRTUALENV:-$CYAN}
+    LP_COLOR_KUBERNETES=${LP_COLOR_KUBERNETES:-$BLUE}
 
     if [[ -z "${LP_COLORMAP-}" ]]; then
         LP_COLORMAP=(
@@ -1747,6 +1749,16 @@ _lp_set_prompt()
         LP_SCLS=
     fi
 
+    # Display the current Kubernetes context, if availalbe
+    if [[ $LP_ENABLE_KUBERNETES && -n "$(command -v kubectl)" ]]; then
+        LP_K8S=$(kubectl config current-context 2>/dev/null)
+        if [[ -n "$LP_K8S" ]]; then
+            LP_K8S=" (${LP_COLOR_KUBERNETES}${LP_K8S}${NO_COL})"
+        fi
+    else
+        LP_K8S=
+    fi
+
     LP_RUNTIME=$(_lp_sl "$(_lp_runtime)")
 
     # if change of working directory
@@ -1844,7 +1856,7 @@ _lp_set_prompt()
         # add user, host and permissions colon
         PS1+="${LP_BRACKET_OPEN}${LP_USER}${LP_HOST}${LP_PERM}"
 
-        PS1+="${LP_PWD}${LP_BRACKET_CLOSE}${LP_SCLS}${LP_VENV}${LP_PROXY}"
+        PS1+="${LP_PWD}${LP_BRACKET_CLOSE}${LP_SCLS}${LP_VENV}${LP_K8S}${LP_PROXY}"
 
         # Add VCS infos
         # If root, the info has not been collected unless LP_ENABLE_VCS_ROOT

@@ -394,6 +394,8 @@ _lp_source_config()
     LP_COLOR_RUNTIME=${LP_COLOR_RUNTIME:-$YELLOW}
     LP_COLOR_VIRTUALENV=${LP_COLOR_VIRTUALENV:-$CYAN}
     LP_COLOR_KUBERNETES=${LP_COLOR_KUBERNETES:-$BLUE}
+    LP_COLOR_KUBERNETES_PROD=${LP_COLOR_KUBERNETES_PROD:-$BOLD_RED}
+    LP_COLOR_KUBERNETES_DEV=${LP_COLOR_KUBERNETES_DEV:-$BOLD_YELLOW}
 
     if [[ -z "${LP_COLORMAP-}" ]]; then
         LP_COLORMAP=(
@@ -1753,7 +1755,13 @@ _lp_set_prompt()
     if [[ $LP_ENABLE_KUBERNETES && -n "$(command -v kubectl)" ]]; then
         LP_K8S=$(kubectl config current-context 2>/dev/null)
         if [[ -n "$LP_K8S" ]]; then
-            LP_K8S=" (${LP_COLOR_KUBERNETES}${LP_K8S}${NO_COL})"
+            if [[ "$LP_K8S" == "prod" || "$LP_K8S" == "production" ]] ; then
+                LP_K8S=" (${LP_COLOR_KUBERNETES_PROD}${LP_K8S}${NO_COL})"
+            elif [[ "$LP_K8S" == "dev" || "$LP_K8S" == "development" ]] ; then
+                LP_K8S=" (${LP_COLOR_KUBERNETES_DEV}${LP_K8S}${NO_COL})"
+            else
+                LP_K8S=" (${LP_COLOR_KUBERNETES}${LP_K8S}${NO_COL})"
+            fi
         fi
     else
         LP_K8S=

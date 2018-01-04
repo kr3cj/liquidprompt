@@ -267,6 +267,7 @@ _lp_source_config()
     local WARN_RED="${_LP_OPEN_ESC}$(ti_setaf 0 ; ti_setab 1)${_LP_CLOSE_ESC}"
     local CRIT_RED="${_LP_OPEN_ESC}${ti_bold}$(ti_setaf 7 ; ti_setab 1)${_LP_CLOSE_ESC}"
     local DANGER_RED="${_LP_OPEN_ESC}${ti_bold}$(ti_setaf 3 ; ti_setab 1)${_LP_CLOSE_ESC}"
+    local BOLD_BLINK_RED_BG="${_LP_OPEN_ESC}${ti_bold}$(tput blink ; ti_setaf 7 ; ti_setab 1)${_LP_CLOSE_ESC}"
 
     local GREEN="${_LP_OPEN_ESC}$(ti_setaf 2)${_LP_CLOSE_ESC}"
     local BOLD_GREEN="${_LP_OPEN_ESC}${ti_bold}$(ti_setaf 2)${_LP_CLOSE_ESC}"
@@ -393,9 +394,8 @@ _lp_source_config()
     LP_COLOR_IN_MULTIPLEXER=${LP_COLOR_IN_MULTIPLEXER:-$BOLD_BLUE}
     LP_COLOR_RUNTIME=${LP_COLOR_RUNTIME:-$YELLOW}
     LP_COLOR_VIRTUALENV=${LP_COLOR_VIRTUALENV:-$CYAN}
-    LP_COLOR_KUBERNETES=${LP_COLOR_KUBERNETES:-$BLUE}
-    LP_COLOR_KUBERNETES_PROD=${LP_COLOR_KUBERNETES_PROD:-$BOLD_RED}
-    LP_COLOR_KUBERNETES_DEV=${LP_COLOR_KUBERNETES_DEV:-$BOLD_YELLOW}
+    LP_COLOR_KUBERNETES=${LP_COLOR_KUBERNETES:-$BOLD_YELLOW}
+    LP_COLOR_KUBERNETES_PROD=${LP_COLOR_KUBERNETES_PROD:-$BOLD_BLINK_RED_BG}
 
     if [[ -z "${LP_COLORMAP-}" ]]; then
         LP_COLORMAP=(
@@ -1305,7 +1305,7 @@ case "$LP_OS" in
     {
         (( LP_ENABLE_BATT )) || return 4
         local percent batt_status
-        eval "$(pmset -g batt | sed -n 's/^ -InternalBattery[^	 ]*[	 ]\([0-9]*[0-9]\)%; \([^;]*\).*$/percent=\1 batt_status='\'\\2\'/p)"
+        eval "$(pmset -g batt | sed -n 's/^ -InternalBattery.*[[:space:]]\([0-9]*[0-9]\)%; \([^;]*\).*$/percent=\1 batt_status='\'\\2\'/p)"
         case "$batt_status" in
             charged | "")
             return 4
@@ -1751,17 +1751,18 @@ _lp_set_prompt()
         LP_SCLS=
     fi
 
-    # Display the current Kubernetes context, if availalbe
+    # Display the current Kubernetes context and namespace, if availalbe
     if [[ $LP_ENABLE_KUBERNETES && -n "$(command -v kubectl)" ]]; then
         LP_K8S=$(kubectl config current-context 2>/dev/null)
+        LP_K8S_NS=$(kubectl config view ${LP_K8S} --output json | \
+          jq ".contexts[] | select(.name==\"${LP_K8S}\") | .context.namespace" | tr -d '"' || '')
         if [[ -n "$LP_K8S" ]]; then
-            if [[ "$LP_K8S" == "prod" || "$LP_K8S" == "production" ]] ; then
-                LP_K8S=" (${LP_COLOR_KUBERNETES_PROD}${LP_K8S}${NO_COL})"
-            elif [[ "$LP_K8S" == "dev" || "$LP_K8S" == "development" ]] ; then
-                LP_K8S=" (${LP_COLOR_KUBERNETES_DEV}${LP_K8S}${NO_COL})"
-            else
-                LP_K8S=" (${LP_COLOR_KUBERNETES}${LP_K8S}${NO_COL})"
-            fi
+          case "${LP_K8S}" in
+          prod.*|dam.*|navy.*|blue.*)
+            LP_K8S="${LP_COLOR_KUBERNETES_PROD}${LP_K8S%%.*}:${LP_K8S_NS}${NO_COL} " ;;
+          *)
+            LP_K8S="${LP_COLOR_KUBERNETES}${LP_K8S%%.*}:${LP_K8S_NS}${NO_COL} " ;;
+          esac
         fi
     else
         LP_K8S=
@@ -1860,11 +1861,11 @@ _lp_set_prompt()
 
     if [[ -z "$LP_PS1" ]]; then
         # add title escape time, jobs, load and battery
-        PS1="${LP_PS1_PREFIX}${LP_TIME}${LP_BATT}${LP_LOAD}${LP_TEMP}${LP_JOBS}"
+        PS1="${LP_PS1_PREFIX}${LP_BATT}${LP_LOAD}${LP_TEMP}${LP_JOBS}${LP_K8S}"
         # add user, host and permissions colon
         PS1+="${LP_BRACKET_OPEN}${LP_USER}${LP_HOST}${LP_PERM}"
 
-        PS1+="${LP_PWD}${LP_BRACKET_CLOSE}${LP_SCLS}${LP_VENV}${LP_K8S}${LP_PROXY}"
+        PS1+="${LP_PWD}${LP_BRACKET_CLOSE}${LP_SCLS}${LP_VENV}${LP_PROXY}"
 
         # Add VCS infos
         # If root, the info has not been collected unless LP_ENABLE_VCS_ROOT

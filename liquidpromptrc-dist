@@ -33,12 +33,12 @@ LP_ENABLE_SHORTEN_PATH=1
 # The maximum percentage of the screen width used to display the path before
 # removing the center portion of the path and replacing with '...'.
 # Recommended value is 35
-LP_PATH_LENGTH=35
+LP_PATH_LENGTH=25
 
 # The number of directories (including '/') to keep at the beginning of a
 # shortened path.
 # Recommended value is 2
-LP_PATH_KEEP=2
+LP_PATH_KEEP=1
 
 # Determine if the hostname should always be displayed, even if not connecting
 # through network.
@@ -56,7 +56,7 @@ LP_ENABLE_FQDN=0
 # Defaults to 1 (always display the user name)
 # set to 0 if you want to hide the logged user (it will always display different
 # users)
-LP_USER_ALWAYS=1
+LP_USER_ALWAYS=0
 
 # Display the percentages of load/batteries along with their
 # corresponding marks. Set to 0 to only print the colored marks.
@@ -66,7 +66,7 @@ LP_PERCENTS_ALWAYS=1
 # Use the permissions feature and display a red ':' before the prompt to show
 # when you don't have write permission to the current directory.
 # Recommended value is 1
-LP_ENABLE_PERM=1
+LP_ENABLE_PERM=0
 
 # Enable the proxy detection feature.
 # Recommended value is 1
@@ -99,19 +99,19 @@ LP_ENABLE_GIT=1
 
 # Enable the Subversion special features.
 # Recommended value is 1
-LP_ENABLE_SVN=1
+LP_ENABLE_SVN=0
 
 # Enable the Mercurial special features.
 # Recommended value is 1
-LP_ENABLE_HG=1
+LP_ENABLE_HG=0
 
 # Enable the Fossil special features.
 # Recommended value is 1
-LP_ENABLE_FOSSIL=1
+LP_ENABLE_FOSSIL=0
 
 # Enable the Bazaar special features.
 # Recommanded value is 1
-LP_ENABLE_BZR=1
+LP_ENABLE_BZR=0
 
 # Show time of when the current prompt was displayed. (Must be enabled and
 # disabled in the config file and not after liquidprompt has already been
@@ -120,7 +120,7 @@ LP_ENABLE_TIME=0
 
 # Show runtime of the previous command if over LP_RUNTIME_THRESHOLD
 # Recommended value is 0
-LP_ENABLE_RUNTIME=0
+LP_ENABLE_RUNTIME=1
 
 # Minimal runtime (in seconds) before the runtime will be displayed
 # Recommended value is 2
@@ -150,13 +150,13 @@ LP_TIME_ANALOG=0
 # recommended value is 0
 # See LP_TITLE_OPEN and LP_TITLE_CLOSE to change escape characters to adapt this
 # feature to your specific terminal.
-LP_ENABLE_TITLE=0
+LP_ENABLE_TITLE=1
 
 # Enable Title for screen and byobu
 LP_ENABLE_SCREEN_TITLE=0
 
 # Use different colors for the different hosts you SSH to
-LP_ENABLE_SSH_COLORS=0
+LP_ENABLE_SSH_COLORS=1
 
 # Specify a list of complete and colon (":") separated paths in which, all vcs
 # will be disabled

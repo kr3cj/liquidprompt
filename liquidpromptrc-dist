@@ -38,7 +38,7 @@ LP_PATH_LENGTH=25
 # The number of directories (including '/') to keep at the beginning of a
 # shortened path.
 # Recommended value is 2
-LP_PATH_KEEP=1
+LP_PATH_KEEP=2
 
 # Determine if the hostname should always be displayed, even if not connecting
 # through network.
@@ -133,6 +133,10 @@ LP_ENABLE_VIRTUALENV=1
 # Display the enabled software collections, if any
 # Recommended value is 1
 LP_ENABLE_SCLS=1
+
+# Display the kubernetes context and namespace, if any
+# Recommened value is 1
+LP_ENABLE_KUBERNETES=1
 
 # Show average system temperature
 LP_ENABLE_TEMP=1

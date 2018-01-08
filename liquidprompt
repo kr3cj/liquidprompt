@@ -1757,7 +1757,7 @@ _lp_set_prompt()
     if [[ $LP_ENABLE_KUBERNETES && -n "$(command -v kubectl)" ]]; then
         LP_K8S=$(kubectl config current-context 2>/dev/null)
         LP_K8S_NS=$(kubectl config view ${LP_K8S} --output json | \
-          jq ".contexts[] | select(.name==\"${LP_K8S}\") | .context.namespace" | tr -d '"' || '')
+          jq ".contexts[] | select(.name==\"${LP_K8S}\") | .context.namespace" | tr -d '"' || true)
         if [[ -n "$LP_K8S" ]]; then
           case "${LP_K8S}" in
           prod.*|dam.*|navy.*|blue.*)

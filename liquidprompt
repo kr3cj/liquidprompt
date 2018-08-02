@@ -331,6 +331,7 @@ _lp_source_config()
     LP_ENABLE_VIRTUALENV=${LP_ENABLE_VIRTUALENV:-1}
     LP_ENABLE_SCLS=${LP_ENABLE_SCLS:-1}
     LP_ENABLE_KUBERNETES=${LP_ENABLE_KUBERNETES:-0}
+    LP_ENABLE_AWSVAULT=${LP_ENABLE_AWSVAULT:-0}
     LP_ENABLE_VCS_ROOT=${LP_ENABLE_VCS_ROOT:-0}
     LP_ENABLE_TITLE=${LP_ENABLE_TITLE:-0}
     LP_ENABLE_SCREEN_TITLE=${LP_ENABLE_SCREEN_TITLE:-0}
@@ -396,6 +397,8 @@ _lp_source_config()
     LP_COLOR_VIRTUALENV=${LP_COLOR_VIRTUALENV:-$CYAN}
     LP_COLOR_KUBERNETES=${LP_COLOR_KUBERNETES:-$BOLD_YELLOW}
     LP_COLOR_KUBERNETES_PROD=${LP_COLOR_KUBERNETES_PROD:-$BOLD_BLINK_RED_BG}
+    LP_COLOR_AWSVAULT=${LP_COLOR_AWSVAULT:-$PURPLE}
+    LP_COLOR_AWSVAULT_PROD=${LP_COLOR_AWSVAULT_PROD:-$BOLD_BLINK_RED_BG}
 
     if [[ -z "${LP_COLORMAP-}" ]]; then
         LP_COLORMAP=(
@@ -1755,19 +1758,34 @@ _lp_set_prompt()
 
     # Display the current Kubernetes context and namespace, if availalbe
     if [[ $LP_ENABLE_KUBERNETES && -n "$(command -v kubectl)" ]]; then
-        LP_K8S=$(kubectl config current-context 2>/dev/null)
-        LP_K8S_NS=$(kubectl config view ${LP_K8S} --output json | \
-          jq ".contexts[] | select(.name==\"${LP_K8S}\") | .context.namespace" | tr -d '"' || true)
-        if [[ -n "$LP_K8S" ]]; then
-          case "${LP_K8S}" in
-          prod.*|dam.*|navy.*|blue.*)
+      LP_K8S=$(kubectl config current-context 2>/dev/null)
+      LP_K8S_NS=$(kubectl config view ${LP_K8S} --output json | \
+        jq ".contexts[] | select(.name==\"${LP_K8S}\") | .context.namespace" | tr -d '"' || true)
+      if [[ -n "$LP_K8S" ]]; then
+        case "${LP_K8S}" in
+          k8s.*|*prod*)
             LP_K8S="${LP_COLOR_KUBERNETES_PROD}${LP_K8S%%.*}:${LP_K8S_NS}${NO_COL} " ;;
           *)
             LP_K8S="${LP_COLOR_KUBERNETES}${LP_K8S%%.*}:${LP_K8S_NS}${NO_COL} " ;;
-          esac
-        fi
+        esac
+      fi
     else
-        LP_K8S=
+      LP_K8S=
+    fi
+
+    # Display the current AWS_VAULT profile, if available
+    if [[ ${LP_ENABLE_AWSVAULT} && -n "$(command -v aws-vault)" ]]; then
+      LP_AWSVAULT=${AWS_VAULT}
+      if [[ -n "${LP_AWSVAULT}" ]]; then
+        case "${LP_AWSVAULT}" in
+          *default*|*prod*)
+            LP_AWSVAULT="${LP_COLOR_AWSVAULT_PROD}(aws:${LP_AWSVAULT})${NO_COL} " ;;
+          *)
+            LP_AWSVAULT="${LP_COLOR_AWSVAULT}(aws:${LP_AWSVAULT})${NO_COL} " ;;
+        esac
+      fi
+    else
+      LP_AWSVAULT=
     fi
 
     LP_RUNTIME=$(_lp_sl "$(_lp_runtime)")
@@ -1863,7 +1881,7 @@ _lp_set_prompt()
 
     if [[ -z "$LP_PS1" ]]; then
         # add title escape time, jobs, load and battery
-        PS1="${LP_PS1_PREFIX}${LP_TIME}${LP_BATT}${LP_LOAD}${LP_TEMP}${LP_JOBS}${LP_K8S}"
+        PS1="${LP_PS1_PREFIX}${LP_TIME}${LP_BATT}${LP_LOAD}${LP_TEMP}${LP_JOBS}${LP_K8S}${LP_AWSVAULT}"
         # add user, host and permissions colon
         PS1+="${LP_BRACKET_OPEN}${LP_USER}${LP_HOST}${LP_PERM}"
 

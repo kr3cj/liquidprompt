@@ -1777,8 +1777,20 @@ _lp_set_prompt()
     if [[ ${LP_ENABLE_AWSVAULT} && -n "$(command -v aws-vault)" ]]; then
       LP_AWSVAULT=${AWS_VAULT}
       if [[ -n "${LP_AWSVAULT}" ]]; then
+        # detect any assumed roles
+        local LP_AWSVAULT_ROLE=$(aws sts get-caller-identity --query Arn --output text)
+        # make assumed role timeouts visible
+        [[ ${?} -ne 0 ]] && LP_AWSVAULT="${LP_AWSVAULT}:ROLE_TIMED_OUT!"
+        # display assumed role
+        if [[ ${LP_AWSVAULT_ROLE} =~ ":assumed-role/" ]]; then
+          # without using subshell, strip off preceding ".*assumed-role/"
+          LP_AWSVAULT_ROLE=${LP_AWSVAULT_ROLE##*assumed-role/}
+          # without using subshell, strip off ending "/.*"
+          LP_AWSVAULT_ROLE=${LP_AWSVAULT_ROLE%%/*}
+          LP_AWSVAULT="${LP_AWSVAULT}:${LP_AWSVAULT_ROLE}"
+        fi
         case "${LP_AWSVAULT}" in
-          *default*|*prod*|*kops-admin*)
+          *default*|*prod-admin*|*prod-sudo*)
             LP_AWSVAULT="${LP_COLOR_AWSVAULT_PROD}(aws:${LP_AWSVAULT})${NO_COL} " ;;
           *)
             LP_AWSVAULT="${LP_COLOR_AWSVAULT}(aws:${LP_AWSVAULT})${NO_COL} " ;;

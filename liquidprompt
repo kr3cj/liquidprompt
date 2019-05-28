@@ -397,7 +397,7 @@ _lp_source_config()
     LP_COLOR_VIRTUALENV=${LP_COLOR_VIRTUALENV:-$CYAN}
     LP_COLOR_KUBERNETES=${LP_COLOR_KUBERNETES:-$BOLD_YELLOW}
     LP_COLOR_KUBERNETES_PROD=${LP_COLOR_KUBERNETES_PROD:-$BOLD_BLINK_RED_BG}
-    LP_COLOR_AWSVAULT=${LP_COLOR_AWSVAULT:-$PURPLE}
+    LP_COLOR_AWSVAULT=${LP_COLOR_AWSVAULT:-$GREEN}
     LP_COLOR_AWSVAULT_PROD=${LP_COLOR_AWSVAULT_PROD:-$BOLD_BLINK_RED_BG}
 
     if [[ -z "${LP_COLORMAP-}" ]]; then
@@ -1776,12 +1776,11 @@ _lp_set_prompt()
     # Display the current AWS_VAULT profile, if available
     if [[ ${LP_ENABLE_AWSVAULT} && -n "$(command -v aws-vault)" ]]; then
       LP_AWSVAULT=${AWS_VAULT}
-      if [[ -n "${LP_AWSVAULT}" ]]; then
+      if [[ -n ${LP_AWSVAULT} ]]; then
         # detect any assumed roles
-        local LP_AWSVAULT_ROLE=$(aws sts get-caller-identity --query Arn --output text)
-        # make assumed role timeouts visible
-        [[ ${?} -ne 0 ]] && LP_AWSVAULT="${LP_AWSVAULT}:ROLE_TIMED_OUT!"
-        # display assumed role
+        local LP_AWSVAULT_ROLE=$(aws sts get-caller-identity --query Arn --output text \
+          2> /dev/null || echo "ROLE_TIMED_OUT")
+        # display any assumed role
         if [[ ${LP_AWSVAULT_ROLE} =~ ":assumed-role/" ]]; then
           # without using subshell, strip off preceding ".*assumed-role/"
           LP_AWSVAULT_ROLE=${LP_AWSVAULT_ROLE##*assumed-role/}
@@ -1790,7 +1789,7 @@ _lp_set_prompt()
           LP_AWSVAULT="${LP_AWSVAULT}:${LP_AWSVAULT_ROLE}"
         fi
         case "${LP_AWSVAULT}" in
-          *default*|*prod-admin*|*prod-sudo*)
+          *ROLE_TIMED_OUT|*default*|*prod-admin*|*prod-sudo*)
             LP_AWSVAULT="${LP_COLOR_AWSVAULT_PROD}(aws:${LP_AWSVAULT})${NO_COL} " ;;
           *)
             LP_AWSVAULT="${LP_COLOR_AWSVAULT}(aws:${LP_AWSVAULT})${NO_COL} " ;;

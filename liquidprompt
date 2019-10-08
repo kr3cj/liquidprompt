@@ -132,6 +132,27 @@ else
     return
 fi
 
+_throttle()
+{
+  if [ "${#}" -lt 2 ]; then
+    printf '%s\n' "Usage: throttle timeout command [arg ... ]" >&2
+    return 1
+  fi
+  # echo "starting throttle function"
+
+  local t=${1}
+  shift
+
+  if [[ -n "${_throttled["${1}"]}" ]]; then
+    if [[ "$(date +%s)" -ge "${_throttled["${1}"]}" ]]; then
+      "$@" && _throttled["${1}"]=$((t + $(date +%s)))
+    else
+      : printf '%s\n' "Timeout for: ${1} has not yet been reached" >&2
+    fi
+  else
+    "${@}" && _throttled["${1}"]=$((t + $(date +%s)))
+  fi
+}
 
 # Store $2 (or $?) as a true/false value in variable named $1
 # $? is propagated
@@ -303,15 +324,15 @@ _lp_source_config()
     LP_LOAD_THRESHOLD=${LP_LOAD_THRESHOLD:-60}
     LP_TEMP_THRESHOLD=${LP_TEMP_THRESHOLD:-60}
     LP_RUNTIME_THRESHOLD=${LP_RUNTIME_THRESHOLD:-2}
-    LP_PATH_LENGTH=${LP_PATH_LENGTH:-35}
-    LP_PATH_KEEP=${LP_PATH_KEEP:-2}
+    LP_PATH_LENGTH=${LP_PATH_LENGTH:-70}
+    LP_PATH_KEEP=${LP_PATH_KEEP:-4}
     LP_PATH_DEFAULT="${LP_PATH_DEFAULT:-$_LP_PWD_SYMBOL}"
     LP_HOSTNAME_ALWAYS=${LP_HOSTNAME_ALWAYS:-0}
     LP_USER_ALWAYS=${LP_USER_ALWAYS:-1}
     LP_PERCENTS_ALWAYS=${LP_PERCENTS_ALWAYS:-1}
     LP_PS1=${LP_PS1:-""}
     LP_PS1_PREFIX=${LP_PS1_PREFIX:-""}
-    LP_PS1_POSTFIX=${LP_PS1_POSTFIX:-""}
+    LP_PS1_POSTFIX=${LP_PS1_POSTFIX:-"\n$ "}
 
     LP_ENABLE_PERM=${LP_ENABLE_PERM:-1}
     LP_ENABLE_SHORTEN_PATH=${LP_ENABLE_SHORTEN_PATH:-1}
@@ -332,6 +353,7 @@ _lp_source_config()
     LP_ENABLE_SCLS=${LP_ENABLE_SCLS:-1}
     LP_ENABLE_KUBERNETES=${LP_ENABLE_KUBERNETES:-0}
     LP_ENABLE_AWSVAULT=${LP_ENABLE_AWSVAULT:-0}
+    LP_ENABLE_ASSUMEROLE=${LP_ENABLE_ASSUMEROLE:-0}
     LP_ENABLE_VCS_ROOT=${LP_ENABLE_VCS_ROOT:-0}
     LP_ENABLE_TITLE=${LP_ENABLE_TITLE:-0}
     LP_ENABLE_SCREEN_TITLE=${LP_ENABLE_SCREEN_TITLE:-0}
@@ -399,6 +421,8 @@ _lp_source_config()
     LP_COLOR_KUBERNETES_PROD=${LP_COLOR_KUBERNETES_PROD:-$BOLD_BLINK_RED_BG}
     LP_COLOR_AWSVAULT=${LP_COLOR_AWSVAULT:-$GREEN}
     LP_COLOR_AWSVAULT_PROD=${LP_COLOR_AWSVAULT_PROD:-$BOLD_BLINK_RED_BG}
+    LP_COLOR_ASSUMEROLE=${LP_COLOR_ASSUMEROLE:-$GREEN}
+    LP_COLOR_ASSUMEROLE_PROD=${LP_COLOR_ASSUMEROLE_PROD:-$BOLD_BLINK_RED_BG}
 
     if [[ -z "${LP_COLORMAP-}" ]]; then
         LP_COLORMAP=(
@@ -424,7 +448,7 @@ _lp_source_config()
     # Default config file may be the XDG standard ~/.config/liquidpromptrc,
     # but heirloom dotfile has priority.
 
-    if [[ -f "$HOME/.liquidpromptrc" ]]; then
+    if [[ -f "$HOME/.liquidpromptrc" ]] || [[ -h "$HOME/.liquidpromptrc" ]]; then
         configfile="$HOME/.liquidpromptrc"
     else
         local first
@@ -1761,12 +1785,16 @@ _lp_set_prompt()
       LP_K8S=$(kubectl config current-context 2>/dev/null)
       LP_K8S_NS=$(kubectl config view --output json | \
         jq ".contexts[] | select(.name==\"${LP_K8S}\") | .context.namespace" | tr -d '"' || true)
+      # strip secondary domains
+      LP_K8S="${LP_K8S%%.*}"
+      # strip preceding user@
+      # LP_K8S="${LP_K8S##*@}"
       if [[ -n "$LP_K8S" ]]; then
         case "${LP_K8S}" in
-          k8s.*|*prod*)
-            LP_K8S="${LP_COLOR_KUBERNETES_PROD}${LP_K8S%%.*}:${LP_K8S_NS}${NO_COL} " ;;
+          k8s.*|*prod*|*barrel*)
+            LP_K8S="${LP_COLOR_KUBERNETES_PROD}k8s->${LP_K8S}:${LP_K8S_NS}${NO_COL} " ;;
           *)
-            LP_K8S="${LP_COLOR_KUBERNETES}${LP_K8S%%.*}:${LP_K8S_NS}${NO_COL} " ;;
+            LP_K8S="${LP_COLOR_KUBERNETES}k8s->${LP_K8S}:${LP_K8S_NS}${NO_COL} " ;;
         esac
       fi
     else
@@ -1778,7 +1806,7 @@ _lp_set_prompt()
       LP_AWSVAULT=${AWS_VAULT}
       if [[ -n ${LP_AWSVAULT} ]]; then
         # detect any assumed roles
-        local LP_AWSVAULT_ROLE=$(aws sts get-caller-identity --query Arn --output text \
+        local LP_AWSVAULT_ROLE=$(_throttle 30 aws sts get-caller-identity --query Arn --output text \
           2> /dev/null || echo "ROLE_TIMED_OUT")
         # display any assumed role
         if [[ ${LP_AWSVAULT_ROLE} =~ ":assumed-role/" ]]; then
@@ -1789,14 +1817,38 @@ _lp_set_prompt()
           LP_AWSVAULT="${LP_AWSVAULT}:${LP_AWSVAULT_ROLE}"
         fi
         case "${LP_AWSVAULT}" in
-          *ROLE_TIMED_OUT|*default*|*prod-admin*|*prod-sudo*)
-            LP_AWSVAULT="${LP_COLOR_AWSVAULT_PROD}(aws:${LP_AWSVAULT})${NO_COL} " ;;
+          *default*|*prod-admin*|*prod-sudo*)
+            LP_AWSVAULT="${LP_COLOR_AWSVAULT_PROD}(aws->${LP_AWSVAULT})${NO_COL} " ;;
           *)
-            LP_AWSVAULT="${LP_COLOR_AWSVAULT}(aws:${LP_AWSVAULT})${NO_COL} " ;;
+            LP_AWSVAULT="${LP_COLOR_AWSVAULT}(aws->${LP_AWSVAULT})${NO_COL} " ;;
         esac
       fi
     else
       LP_AWSVAULT=
+    fi
+
+    # Display the current assume-role profile, if available
+    if [[ ${LP_ENABLE_ASSUMEROLE} && -n "$(command -v assume-role)" ]]; then
+      if [[ ${SHLVL} -ge 2 ]]; then
+        # detect any assumed roles
+        local LP_ASSUMEROLE_ROLE=$(_throttle 30 aws sts get-caller-identity --query Arn --output text \
+          2> /dev/null || echo "ROLE_TIMED_OUT")
+        # display any assumed role
+        if [[ ${LP_ASSUMEROLE_ROLE} =~ ":assumed-role/" ]]; then
+          # without using subshell, strip off preceding ".*assumed-role/"
+          LP_ASSUMEROLE_ROLE=${LP_ASSUMEROLE_ROLE##*assumed-role/}
+          # without using subshell, strip off ending "/.*"
+          LP_ASSUMEROLE_ROLE=${LP_ASSUMEROLE_ROLE%%/*}
+        fi
+        case "${AWS_PROFILE}" in
+          *default*|*prod*)
+            LP_ASSUMEROLE="${LP_COLOR_ASSUMEROLE_PROD}(aws->${AWS_PROFILE}:${LP_ASSUMEROLE_ROLE})${NO_COL} " ;;
+          *)
+            LP_ASSUMEROLE="${LP_COLOR_ASSUMEROLE}(aws->${AWS_PROFILE}:${LP_ASSUMEROLE_ROLE})${NO_COL} " ;;
+        esac
+      fi
+    else
+      LP_ASSUMEROLE=
     fi
 
     LP_RUNTIME=$(_lp_sl "$(_lp_runtime)")
@@ -1892,7 +1944,7 @@ _lp_set_prompt()
 
     if [[ -z "$LP_PS1" ]]; then
         # add title escape time, jobs, load and battery
-        PS1="${LP_PS1_PREFIX}${LP_TIME}${LP_BATT}${LP_LOAD}${LP_TEMP}${LP_JOBS}${LP_K8S}${LP_AWSVAULT}"
+        PS1="${LP_PS1_PREFIX}${LP_TIME}${LP_BATT}${LP_LOAD}${LP_TEMP}${LP_JOBS}${LP_K8S}${LP_AWSVAULT}${LP_ASSUMEROLE}"
         # add user, host and permissions colon
         PS1+="${LP_BRACKET_OPEN}${LP_USER}${LP_HOST}${LP_PERM}"
 

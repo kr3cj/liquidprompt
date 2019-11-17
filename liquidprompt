@@ -353,7 +353,7 @@ _lp_source_config()
     LP_ENABLE_SCLS=${LP_ENABLE_SCLS:-1}
     LP_ENABLE_KUBERNETES=${LP_ENABLE_KUBERNETES:-0}
     LP_ENABLE_AWSVAULT=${LP_ENABLE_AWSVAULT:-0}
-    LP_ENABLE_ASSUMEROLE=${LP_ENABLE_ASSUMEROLE:-0}
+    LP_ENABLE_SAML2AWS=${LP_ENABLE_SAML2AWS:-0}
     LP_ENABLE_VCS_ROOT=${LP_ENABLE_VCS_ROOT:-0}
     LP_ENABLE_TITLE=${LP_ENABLE_TITLE:-0}
     LP_ENABLE_SCREEN_TITLE=${LP_ENABLE_SCREEN_TITLE:-0}
@@ -421,8 +421,8 @@ _lp_source_config()
     LP_COLOR_KUBERNETES_PROD=${LP_COLOR_KUBERNETES_PROD:-$BOLD_BLINK_RED_BG}
     LP_COLOR_AWSVAULT=${LP_COLOR_AWSVAULT:-$GREEN}
     LP_COLOR_AWSVAULT_PROD=${LP_COLOR_AWSVAULT_PROD:-$BOLD_BLINK_RED_BG}
-    LP_COLOR_ASSUMEROLE=${LP_COLOR_ASSUMEROLE:-$GREEN}
-    LP_COLOR_ASSUMEROLE_PROD=${LP_COLOR_ASSUMEROLE_PROD:-$BOLD_BLINK_RED_BG}
+    LP_COLOR_SAML2AWS=${LP_COLOR_SAML2AWS:-$GREEN}
+    LP_COLOR_SAML2AWS_PROD=${LP_COLOR_SAML2AWS_PROD:-$BOLD_BLINK_RED_BG}
 
     if [[ -z "${LP_COLORMAP-}" ]]; then
         LP_COLORMAP=(
@@ -1782,6 +1782,7 @@ _lp_set_prompt()
 
     # Display the current Kubernetes context and namespace, if availalbe
     if [[ $LP_ENABLE_KUBERNETES && -n "$(command -v kubectl)" ]]; then
+      LP_K8S_ICON=$'\u2638 '
       LP_K8S=$(kubectl config current-context 2>/dev/null)
       LP_K8S_NS=$(kubectl config view --output json | \
         jq ".contexts[] | select(.name==\"${LP_K8S}\") | .context.namespace" | tr -d '"' || true)
@@ -1792,15 +1793,16 @@ _lp_set_prompt()
       if [[ -n "$LP_K8S" ]]; then
         case "${LP_K8S}" in
           k8s.*|*prod*|*barrel*)
-            LP_K8S="${LP_COLOR_KUBERNETES_PROD}k8s->${LP_K8S}:${LP_K8S_NS}${NO_COL} " ;;
+            LP_K8S="${LP_COLOR_KUBERNETES_PROD}${LP_K8S_ICON}${LP_K8S}:${LP_K8S_NS}${NO_COL} " ;;
           *)
-            LP_K8S="${LP_COLOR_KUBERNETES}k8s->${LP_K8S}:${LP_K8S_NS}${NO_COL} " ;;
+            LP_K8S="${LP_COLOR_KUBERNETES}${LP_K8S_ICON}${LP_K8S}:${LP_K8S_NS}${NO_COL} " ;;
         esac
       fi
     else
       LP_K8S=
     fi
 
+    LP_AWS_ICON=$'\u2601 '
     # Display the current AWS_VAULT profile, if available
     if [[ ${LP_ENABLE_AWSVAULT} && -n "$(command -v aws-vault)" ]]; then
       LP_AWSVAULT=${AWS_VAULT}
@@ -1818,37 +1820,37 @@ _lp_set_prompt()
         fi
         case "${LP_AWSVAULT}" in
           *default*|*prod-admin*|*prod-sudo*)
-            LP_AWSVAULT="${LP_COLOR_AWSVAULT_PROD}(aws->${LP_AWSVAULT})${NO_COL} " ;;
+            LP_AWSVAULT="${LP_COLOR_AWSVAULT_PROD}(${LP_AWS_ICON}${LP_AWSVAULT})${NO_COL} " ;;
           *)
-            LP_AWSVAULT="${LP_COLOR_AWSVAULT}(aws->${LP_AWSVAULT})${NO_COL} " ;;
+            LP_AWSVAULT="${LP_COLOR_AWSVAULT}(${LP_AWS_ICON}${LP_AWSVAULT})${NO_COL} " ;;
         esac
       fi
     else
       LP_AWSVAULT=
     fi
 
-    # Display the current assume-role profile, if available
-    if [[ ${LP_ENABLE_ASSUMEROLE} && -n "$(command -v assume-role)" ]]; then
+    # Display the current SAML2AWS profile, if available
+    if [[ ${LP_ENABLE_SAML2AWS} && -n "$(command -v saml2aws)" ]]; then
       if [[ ${SHLVL} -ge 2 ]]; then
         # detect any assumed roles
-        local LP_ASSUMEROLE_ROLE=$(_throttle 30 aws sts get-caller-identity --query Arn --output text \
+        local LP_SAML2AWS_ROLE=$(_throttle 30 aws sts get-caller-identity --query Arn --output text \
           2> /dev/null || echo "ROLE_TIMED_OUT")
         # display any assumed role
-        if [[ ${LP_ASSUMEROLE_ROLE} =~ ":assumed-role/" ]]; then
+        if [[ ${LP_SAML2AWS_ROLE} =~ ":assumed-role/" ]]; then
           # without using subshell, strip off preceding ".*assumed-role/"
-          LP_ASSUMEROLE_ROLE=${LP_ASSUMEROLE_ROLE##*assumed-role/}
+          LP_SAML2AWS_ROLE=${LP_SAML2AWS_ROLE##*assumed-role/}
           # without using subshell, strip off ending "/.*"
-          LP_ASSUMEROLE_ROLE=${LP_ASSUMEROLE_ROLE%%/*}
+          LP_SAML2AWS_ROLE=${LP_SAML2AWS_ROLE%%/*}
         fi
         case "${AWS_PROFILE}" in
           *default*|*prod*)
-            LP_ASSUMEROLE="${LP_COLOR_ASSUMEROLE_PROD}(aws->${AWS_PROFILE}:${LP_ASSUMEROLE_ROLE})${NO_COL} " ;;
+            LP_SAML2AWS="${LP_AWS_ICON}${LP_COLOR_SAML2AWS_PROD}${AWS_PROFILE}:${LP_SAML2AWS_ROLE}${NO_COL} " ;;
           *)
-            LP_ASSUMEROLE="${LP_COLOR_ASSUMEROLE}(aws->${AWS_PROFILE}:${LP_ASSUMEROLE_ROLE})${NO_COL} " ;;
+            LP_SAML2AWS="${LP_AWS_ICON}${LP_COLOR_SAML2AWS}${AWS_PROFILE}:${LP_SAML2AWS_ROLE}${NO_COL} " ;;
         esac
       fi
     else
-      LP_ASSUMEROLE=
+      LP_SAML2AWS=
     fi
 
     LP_RUNTIME=$(_lp_sl "$(_lp_runtime)")
@@ -1944,7 +1946,7 @@ _lp_set_prompt()
 
     if [[ -z "$LP_PS1" ]]; then
         # add title escape time, jobs, load and battery
-        PS1="${LP_PS1_PREFIX}${LP_TIME}${LP_BATT}${LP_LOAD}${LP_TEMP}${LP_JOBS}${LP_K8S}${LP_AWSVAULT}${LP_ASSUMEROLE}"
+        PS1="${LP_PS1_PREFIX}${LP_TIME}${LP_BATT}${LP_LOAD}${LP_TEMP}${LP_JOBS}${LP_K8S}${LP_AWSVAULT}${LP_SAML2AWS}"
         # add user, host and permissions colon
         PS1+="${LP_BRACKET_OPEN}${LP_USER}${LP_HOST}${LP_PERM}"
 

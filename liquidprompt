@@ -1842,11 +1842,11 @@ _lp_set_prompt()
           # without using subshell, strip off ending "/.*"
           LP_SAML2AWS_ROLE=${LP_SAML2AWS_ROLE%%/*}
         fi
-        case "${AWS_PROFILE}" in
+        case "${MY_AWS_PROFILE}" in
           *default*|*prod*)
-            LP_SAML2AWS="${LP_AWS_ICON}${LP_COLOR_SAML2AWS_PROD}${AWS_PROFILE}:${LP_SAML2AWS_ROLE}${NO_COL} " ;;
+            LP_SAML2AWS="${LP_AWS_ICON}${LP_COLOR_SAML2AWS_PROD}${MY_AWS_PROFILE}:${LP_SAML2AWS_ROLE}${NO_COL} " ;;
           *)
-            LP_SAML2AWS="${LP_AWS_ICON}${LP_COLOR_SAML2AWS}${AWS_PROFILE}:${LP_SAML2AWS_ROLE}${NO_COL} " ;;
+            LP_SAML2AWS="${LP_AWS_ICON}${LP_COLOR_SAML2AWS}${MY_AWS_PROFILE}:${LP_SAML2AWS_ROLE}${NO_COL} " ;;
         esac
       fi
     else

@@ -1832,7 +1832,7 @@ _lp_set_prompt()
 
     # Display the current SAML2AWS profile, if available
     if [[ ${LP_ENABLE_SAML2AWS} && -n "$(command -v saml2aws)" ]]; then
-      if [[ ${SHLVL} -ge 2 ]]; then
+      if [[ -n ${AWS_SESSION_TOKEN} ]]; then
         # detect any assumed roles
         local LP_SAML2AWS_ROLE=$(_throttle 30 aws sts get-caller-identity --query Arn --output text \
           2> /dev/null || echo "ROLE_TIMED_OUT")

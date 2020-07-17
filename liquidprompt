@@ -1784,8 +1784,8 @@ _lp_set_prompt()
     # Display the current Kubernetes context and namespace, if availalbe
     if [[ $LP_ENABLE_KUBERNETES && -n "$(command -v kubectl)" ]]; then
       LP_K8S_ICON=$'\u2638 '
-      LP_K8S=$(kubectl config current-context 2>/dev/null)
-      LP_K8S_NS=$(kubectl config view --output json | \
+      LP_K8S=$(${HOME}/.asdf/shims/kubectl config current-context 2>/dev/null)
+      LP_K8S_NS=$(${HOME}/.asdf/shims/kubectl config view --output json | \
         jq ".contexts[] | select(.name==\"${LP_K8S}\") | .context.namespace" | tr -d '"' || true)
       # strip secondary domains
       LP_K8S="${LP_K8S%%.*}"

@@ -1810,7 +1810,7 @@ _lp_set_prompt()
       if [[ -n ${LP_AWSVAULT} ]]; then
         # detect any assumed roles
         local LP_AWSVAULT_ROLE=$(_throttle 30 aws sts get-caller-identity --query Arn --output text \
-          2> /dev/null || echo "ROLE_TIMED_OUT")
+          2> /dev/null || echo "${LP_COLOR_AWSVAULT_PROD}ROLE_TIMED_OUT${NO_COL}")
         # display any assumed role
         if [[ ${LP_AWSVAULT_ROLE} =~ ":assumed-role/" ]]; then
           # without using subshell, strip off preceding ".*assumed-role/"
@@ -1835,7 +1835,7 @@ _lp_set_prompt()
       if [[ -n ${AWS_SESSION_TOKEN} ]]; then
         # detect any assumed roles
         local LP_SAML2AWS_ROLE=$(_throttle 30 aws sts get-caller-identity --query Arn --output text \
-          2> /dev/null || echo "ROLE_TIMED_OUT")
+          2> /dev/null || echo "${LP_COLOR_AWSVAULT_PROD}ROLE_TIMED_OUT${NO_COL}")
         # display any assumed role
         if [[ ${LP_SAML2AWS_ROLE} =~ ":assumed-role/" ]]; then
           # without using subshell, strip off preceding ".*assumed-role/"
